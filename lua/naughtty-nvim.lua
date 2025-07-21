@@ -154,11 +154,35 @@ M.set_unset_current_active = function()
 end
 
 M.setup = function(opts)
-  opts = { noremap = true, silent = true }
+  local defaults = {
+    keymap = {
+      escape_terminal_insert_mode = '<Esc>',
+      swap = '<C-t><C-t>',
+      toggle_active = '<C-t><C-r>',
+    },
+  }
 
-  vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', opts, { desc = "in terminal mode, enter normal mode" })
-  vim.keymap.set({ 'n', 't' }, '<C-t><C-t>', M.swap, { desc = 'swap buffers' })
-  vim.keymap.set({ 'n', 't' }, '<C-t><C-r>', M.set_unset_current_active, { desc = 'toggle active terminal' })
+  local config = vim.tbl_deep_extend('force', defaults, opts or {})
+
+  local keymap_actions = {
+    escape_terminal_insert_mode = function(key)
+      vim.keymap.set('t', key, '<C-\\><C-n>', { silent = true, desc = "in terminal mode, enter normal mode" })
+    end,
+    swap = function(key)
+      vim.keymap.set({ 'n', 't' }, key, M.swap, { silent = true, desc = 'swap buffers' })
+    end,
+    toggle_active = function(key)
+      vim.keymap.set({ 'n', 't' }, key, M.set_unset_current_active, { silent = true, desc = 'toggle active terminal' })
+    end,
+  }
+
+  if config.keymap then
+    for action, key in pairs(config.keymap) do
+      if key and keymap_actions[action] then
+        keymap_actions[action](key)
+      end
+    end
+  end
 end
 
 return M
