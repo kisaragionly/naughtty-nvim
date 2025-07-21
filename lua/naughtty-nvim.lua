@@ -2,14 +2,14 @@ local vim = vim
 
 --- @class Buffer
 --- @field buffer any|nil
---- @field dirty boolean
+--- @field active boolean
 local Buffer = {}
 
 --- @return Buffer
 function Buffer.new()
   local self = setmetatable({}, { __index = Buffer })
   self.buffer = nil
-  self.dirty = false
+  self.active = true
   return self
 end
 
@@ -63,26 +63,33 @@ end
 --- @return Buffer|nil
 function BufferManager:get_first_clean()
   for _, buffer in ipairs(self.buffers) do
-    if buffer.dirty == false then
+    if buffer.active == true then
       return buffer
     end
   end
   return nil
 end
 
+--- @class M
+--- @function swap
+--- @function set_unset_current_active
 local M = {}
 
 local non_terminal_buffer_number = nil
 local terminal_buffer_manager = BufferManager.new()
 
-M.test = function()
+M.swap = function()
   local current_buffer_number = vim.fn.bufnr('%')
   local current_is_terminal_buffer = vim.bo.buftype == 'terminal'
 
-  -- If the current buffer is a terminal and it's not in the terminal_buffers manager we insert it
+  -- If we are in a terminal and it's not in the terminal_buffers manager we insert it
   if current_is_terminal_buffer then
     local terminal_exist_in_manager = terminal_buffer_manager:get(current_buffer_number)
     if terminal_exist_in_manager == nil then
+      -- Make all the other buffers inactive, the new one will be active
+      for _, buffer in ipairs(terminal_buffer_manager.buffers) do
+        buffer.active = false
+      end
       local new_buffer = Buffer.new()
       new_buffer.buffer = current_buffer_number
       terminal_buffer_manager:insert(new_buffer)
@@ -119,9 +126,45 @@ M.test = function()
   -- if we haven't swapped yet, we create a new terminal
   vim.cmd('term')
   local new_terminal_buffer_number = vim.fn.bufnr('%')
+  -- Make all the other buffers inactive, the new one will be active
+  for _, buffer in ipairs(terminal_buffer_manager.buffers) do
+    buffer.active = false
+  end
   local new_buffer = Buffer.new()
   new_buffer.buffer = new_terminal_buffer_number
   terminal_buffer_manager:insert(new_buffer)
+end
+
+M.set_unset_current_active = function()
+  local current_buffer_number = vim.fn.bufnr('%')
+  local current_is_terminal_buffer = vim.bo.buftype == 'terminal'
+
+  -- If we are in a terminal and it's not in the terminal_buffers manager we insert it
+  if current_is_terminal_buffer then
+    local terminal_exist_in_manager = terminal_buffer_manager:get(current_buffer_number)
+    if terminal_exist_in_manager == nil then
+      -- Make all the other buffers inactive, the new one will be active
+      for _, buffer in ipairs(terminal_buffer_manager.buffers) do
+        buffer.active = false
+      end
+      local new_buffer = Buffer.new()
+      new_buffer.buffer = current_buffer_number
+      terminal_buffer_manager:insert(new_buffer)
+      return
+    end
+  end
+
+  -- If we are in a terminal and it does exists in the manager we save its current state
+  -- then we set all buffers to active = false
+  -- then we set the current buffer active true/false from its previous state
+  local current_buffer = terminal_buffer_manager:get(current_buffer_number)
+  if current_buffer then
+    local current_current_active_state = current_buffer.active
+    for _, buffer in ipairs(terminal_buffer_manager.buffers) do
+      buffer.active = false
+    end
+    current_buffer.active = not current_current_active_state
+  end
 end
 
 M.setup = function()
@@ -129,8 +172,10 @@ M.setup = function()
   vim.api.nvim_set_keymap('t', '<Esc>', '<C-\\><C-n>', { noremap = true, silent = true })
 
   -- n <C-t> t <C-t> swaps
-  vim.keymap.set('t', '<C-t>', M.test)
-  vim.keymap.set('n', '<C-t>', M.test)
+  vim.keymap.set('t', '<C-t><C-t>', M.swap)
+  vim.keymap.set('n', '<C-t><C-t>', M.swap)
+  vim.keymap.set('t', '<C-t><C-r>', M.set_unset_current_active)
+  vim.keymap.set('n', '<C-t><C-r>', M.set_unset_current_active)
 end
 
 return M
