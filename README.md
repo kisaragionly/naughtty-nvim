@@ -16,13 +16,16 @@ The plugin simplifies switching between your editing environment and a primary t
 
 lazy.nvim
 
+```lua
 {
   'kisaragionly/naughtty-nvim',
   opts = {},
 }
+```
 
 ### Default config
 
+```lua
 opts = {
   keymap = {
     escape_terminal_insert_mode = '<Esc>',
@@ -30,6 +33,7 @@ opts = {
     toggle_active = '<C-t><C-r>',
   }
 }
+```
 
 ### How will I swap to "inactive" terminal buffers?
 
