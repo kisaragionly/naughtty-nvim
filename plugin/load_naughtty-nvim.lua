@@ -1,0 +1,1 @@
+require("naughtty-nvim").setup()
