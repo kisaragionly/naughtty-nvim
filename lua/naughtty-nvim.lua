@@ -153,8 +153,8 @@ M.set_unset_current_active = function()
   terminal.active = not was_active
 end
 
-M.setup = function()
-  local opts = { noremap = true, silent = true }
+M.setup = function(opts)
+  opts = { noremap = true, silent = true }
 
   vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', opts, { desc = "in terminal mode, enter normal mode" })
   vim.keymap.set({ 'n', 't' }, '<C-t><C-t>', M.swap, { desc = 'swap buffers' })
